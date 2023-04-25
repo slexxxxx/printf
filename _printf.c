@@ -1,67 +1,75 @@
 #include "main.h"
+/**
+ *get_printf_fun - a function that takes format and returns
+ *a function pointer.
+ *@format: the format passed to the struct.
+ *Return: function pointer.
+ */
+int (*get_printf_fun(const char *format))(va_list)
+{
+	unsigned int i;
 
-void print_buffer(char buffer[], int *buff_ind);
+	spec_t  fspec[] = {
+		{"c", print_char},
+		{"s", print_string},
+		{"d", print_decimal},
+		{"i", print_decimal},
+		{NULL, NULL}
+	};
+
+	for (i = 0; fspec[i].specifier != NULL; i++)
+	{
+		if (*(fspec[i].specifier) == *format)
+		break;
+	}
+	return (fspec[i].f);
+}
 
 /**
- * _printf - Printf function
+ * _printf - a  function that produces output according
+ *to a specified format.
  * @format: format.
- * Return: Printed chars.
+ * Return: number of characters printed.
  */
 int _printf(const char *format, ...)
 {
-	int i, printed = 0, printed_chars = 0;
-	int flags, width, precision, size, buff_ind = 0;
-	va_list list;
-	char buffer[BUFF_SIZE];
+	int i = 0;
+	int count = 0;
+	va_list args;
+	int (*func)(va_list);
 
 	if (format == NULL)
 		return (-1);
 
-	va_start(list, format);
-
-	for (i = 0; format && format[i] != '\0'; i++)
+	va_start(args, format);
+	while (format[i])
 	{
-		if (format[i] != '%')
+		for (; format[i] != '%' && format[i]; i++)
 		{
-			buffer[buff_ind++] = format[i];
-			if (buff_ind == BUFF_SIZE)
-				print_buffer(buffer, &buff_ind);
-			/* write(1, &format[i], 1);*/
-			printed_chars++;
+			_putchar(format[i]);
+			count++;
+		}
+		if (!format[i])
+			return (count);
+		func = get_printf_fun(&format[i + 1]);
+		if (func != NULL)
+		{
+			count += func(args);
+			i += 2;
+			continue;
+		}
+		if (format[i + 1] == '\0')
+			return (-1);
+		_putchar(format[i]);
+		count++;
+
+		if (format[i + 1] == '%')
+		{
+			i += 2;
 		}
 		else
-		{
-			print_buffer(buffer, &buff_ind);
-			flags = get_flags(format, &i);
-			width = get_width(format, &i, list);
-			precision = get_precision(format, &i, list);
-			size = get_size(format, &i);
-			++i;
-			printed = handle_print(format, &i, list, buffer,
-				flags, width, precision, size);
-			if (printed == -1)
-				return (-1);
-			printed_chars += printed;
-		}
+		i++;
 	}
-
-	print_buffer(buffer, &buff_ind);
-
-	va_end(list);
-
-	return (printed_chars);
+	va_end(args);
+	return (count);
 }
-
-/**
- * print_buffer - Prints the contents of the buffer if it exist
- * @buffer: Array of chars
- * @buff_ind: Index at which to add next char, represents the length.
- */
-void print_buffer(char buffer[], int *buff_ind)
-{
-	if (*buff_ind > 0)
-		write(1, &buffer[0], *buff_ind);
-
-	*buff_ind = 0;
-}
-
